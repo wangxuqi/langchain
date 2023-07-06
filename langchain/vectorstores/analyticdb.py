@@ -88,6 +88,8 @@ class AnalyticDB(VectorStore):
             Column("embedding", ARRAY(REAL)),
             Column("document", String, nullable=True),
             Column("metadata", JSON, nullable=True),
+            Column("department", String, nullable=True),
+            Column("permission", String, nullable=True),
             extend_existing=True,
         )
         with self.engine.connect() as conn:
@@ -166,6 +168,8 @@ class AnalyticDB(VectorStore):
             Column("embedding", ARRAY(REAL)),
             Column("document", String, nullable=True),
             Column("metadata", JSON, nullable=True),
+            Column("department", String, nullable=True),
+            Column("permission", String, nullable=True),
             extend_existing=True,
         )
 
@@ -175,12 +179,17 @@ class AnalyticDB(VectorStore):
                 for document, metadata, chunk_id, embedding in zip(
                     texts, metadatas, ids, embeddings
                 ):
+                    department = metadata.get("department")
+                    permission = metadata.get("permission")
+
                     chunks_table_data.append(
                         {
                             "id": chunk_id,
                             "embedding": embedding,
                             "document": document,
                             "metadata": metadata,
+                            "department": department,
+                            "permission": permission,
                         }
                     )
 
@@ -283,7 +292,13 @@ class AnalyticDB(VectorStore):
         if filter is not None:
             conditions = [
                 f"metadata->>{key!r} = {value!r}" for key, value in filter.items()
+                if key not in ["department", "permission"]
             ]
+            if "department" in filter:
+                conditions.append(f"department = {filter['department']!r}")
+            if "permission" in filter:
+                conditions.append(f"permission = {filter['permission']!r}")
+
             filter_condition = f"WHERE {' AND '.join(conditions)}"
 
         # Define the base query
@@ -306,7 +321,12 @@ class AnalyticDB(VectorStore):
             (
                 Document(
                     page_content=result.document,
-                    metadata=result.metadata,
+                    metadata={
+                        'id': result.id,
+                        **result.metadata,
+                        'department': result.department,
+                        'permission': result.permission
+                    },
                 ),
                 result.distance if self.embedding_function is not None else None,
             )
@@ -353,6 +373,8 @@ class AnalyticDB(VectorStore):
             Column("embedding", ARRAY(REAL)),
             Column("document", String, nullable=True),
             Column("metadata", JSON, nullable=True),
+            Column("department", JSON, nullable=True),
+            Column("permission", JSON, nullable=True),
             extend_existing=True,
         )
 

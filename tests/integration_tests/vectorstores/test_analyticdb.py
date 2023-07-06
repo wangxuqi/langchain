@@ -98,17 +98,20 @@ def test_analyticdb_with_metadatas_with_scores() -> None:
 def test_analyticdb_with_filter_match() -> None:
     """Test end to end construction and search."""
     texts = ["foo", "bar", "baz"]
-    metadatas = [{"page": str(i)} for i in range(len(texts))]
+    ids = ["foo", "bar", "baz"]
+    metadatas = [{"page": str(i), "permission": "public", "department": "hr"} for i in range(len(texts))]
     docsearch = AnalyticDB.from_texts(
         texts=texts,
         collection_name="test_collection_filter",
         embedding=FakeEmbeddingsWithAdaDimension(),
         metadatas=metadatas,
+        ids=ids,
         connection_string=CONNECTION_STRING,
         pre_delete_collection=True,
     )
-    output = docsearch.similarity_search_with_score("foo", k=1, filter={"page": "0"})
-    assert output == [(Document(page_content="foo", metadata={"page": "0"}), 0.0)]
+    output = docsearch.similarity_search_with_score("foo", k=1, filter={"page": "0", "permission": "public"})
+    print(output)
+    assert output == [(Document(page_content='foo', metadata={'id': 'foo', 'page': '0', 'permission': 'public', 'department': 'hr', }), 0.0)]
 
 
 def test_analyticdb_with_filter_distant_match() -> None:
